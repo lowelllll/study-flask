@@ -60,6 +60,62 @@ def teardown_request():
 	g.db.close()
 
 
+# ---- view ---- #
+@app.route('/')
+def show_entries():
+	"""
+		작성된 글을 보여주는 뷰
+	:return:
+	"""
+	cur = g.db.execute('select title,text from entries order by id desc')
+	entries = [dict(title=row[0], text=row[1]) for row in cur.fetchall()]
+	return render_template('show_entries.html', entries=entries)
+
+
+@app.route('/add',methods=['POST'])
+def add_entry():
+	"""
+		새로운 글을 추가하는 뷰
+		POST 요청에만 응답함.
+	:return:
+	"""
+	if not session.get('logged_in'): # 로그인 되어있는지 확인. session에서 logged_in 키가 존재하고 값이 True인지 검사
+		abort(401)
+	g.db.execute('insert into entries (title,text) values (?,?)',
+				 [request.form['title'],request.form['text']])
+	g.db.commit()
+	flash('New entry was successfully posted') # 메세지로 새로 작성된 글에 대한 정보를 보여줌
+	return redirect(url_for('show_entries')) # redirection
+
+
+@app.route('/login', method=['GET','POST'])
+def login():
+	"""
+		로그인 뷰.
+		설정에서 셋팅한 값과 비교하여 세션의 logged_in 키에 값을 설정해 로그인/로그아웃 상태를 결정.
+	:return:
+	"""
+	error = None
+	if request.method == 'POST':
+		if request.form['username'] != app.config['USERNAME']:
+			error = 'Invalid username'
+		elif request.form['password'] != app.config['PASSWORD']:
+			error = 'Invalid password'
+		else:
+			session['logged_in'] = True
+			flash('You were logged in')
+			return redirect(url_for('show_entries',error=error)) # login 성공
+	return render_template('login.html',error=error) # login 실패
+
+@app.route('/logout')
+def logout():
+	"""
+		로그아웃 뷰
+	:return:
+	"""
+	session.pop('logged_in',None)
+	flash('You were logged out')
+	return redirect(url_for('show_entries'))
 
 if __name__ == "__main__":
 	app.run()
