@@ -50,14 +50,15 @@ def before_request():
 # Http 요청이 끝나고 브라우저에 응답하기 전에 실행.
 # flask.wrapper.Response 객체를 return해야함.
 @app.after_request
-def after_request():
-	pass
+def after_request(response):
+	return response
 
 # Http 요청 결과가 브라우저에 응답한 다음 실행.
 # after_request 함수에서 예외가 발생할 경우 teardown_request로 전달됨.
 @app.teardown_request
-def teardown_request():
+def teardown_request(exception):
 	g.db.close()
+
 
 
 # ---- view ---- #
@@ -88,7 +89,7 @@ def add_entry():
 	return redirect(url_for('show_entries')) # redirection
 
 
-@app.route('/login', method=['GET','POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
 	"""
 		로그인 뷰.
@@ -113,9 +114,10 @@ def logout():
 		로그아웃 뷰
 	:return:
 	"""
-	session.pop('logged_in',None)
+	session.pop('logged_in',None) # 해당 키가 존재하면 값 remove
 	flash('You were logged out')
 	return redirect(url_for('show_entries'))
+
 
 if __name__ == "__main__":
 	app.run()
